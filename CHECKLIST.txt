@@ -1,0 +1,40 @@
+Features voltooid
+All devices hebben unieke ID of user name                         CHECK
+Opvragen welke users er in het huis aanwezig zijn TODO
+Status overview of all the lights                                 CHECK
+Switch the state of a specific light                              CHECK
+When a user enters/leaves, a information message will be transmitted to all other users in the house TODO
+Last user leaves the house, all the lights will be turned o↵ in order to save energy CHECK
+The state of the lights should be restored                        CHECK
+The user asks a list of the inventory of a specific fridge        CHECK
+Notify all clients that the fridge is empty.                      CHECK
+A fridge should be opened                                         CHECK
+The controller handles all communication                          CHECK
+The controller keeps the most recent x measurements for every temperature sensor    CHECK
+Give the current temperature in the house (most recent measurement) CHECK
+A history of the temperature in the house                         CHECK
+    TODO NaN degres celsius. bij de laatste measurement
+
+
+==[USER]==
+Unique id CHECK
+New user doesn't restore light states TODO
+Enter / leave CHECK
+  Transmit enter/leave to other users TODO
+Ask a list of all devices and other users CHECK
+Overview of the state of all the lights CHECK
+Switch a specific light to another state CHECK
+Ask the controller for specific fridge inventory CHECK
+Fridge connection / add / delete  CHECK
+Ask the controller for the current temperature in the house CHECK
+Ask history of the temperature in the house TODO minor issue
+
+==[TEMPERATURESENSOR]==
+Unique id CHECK
+An initial start temperature should be provided CHECK
+Change temperature dynamically CHECK
+
+==[FRIDGE]==
+Unique id CHECK
+Have a list of all the items that have been stored in the fridge CHECK
+Ask the fridge for a list of all the items it contains.
