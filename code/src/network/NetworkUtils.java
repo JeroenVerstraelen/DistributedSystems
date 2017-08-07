@@ -12,6 +12,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Scanner;
 
+import javax.imageio.IIOException;
+
 
 public class NetworkUtils {
 	
@@ -56,21 +58,23 @@ public class NetworkUtils {
         System.out.println("===============================================================");
         System.out.println("Please choose the index of the IP address type you want to use.");
         while (true) {
-            System.out.print("ChooseIPAddress> ");
-            String nextLine = scanner.nextLine();
-            int input = !nextLine.equals("") ? Integer.parseInt(nextLine) : -1;
-            if (input >= 0 && input < netInts.size()) {
-            	NetworkInterface netint = netInts.get(input);
-            	System.out.println("Please choose the InetAddress index you want to use");
-                System.out.print("ChooseIPAddress> ");
-                List<InetAddress> inetList = Collections.list(netint.getInetAddresses());
-                int inetAddressIndex = Integer.parseInt(scanner.nextLine());
-                if (inetAddressIndex >= 0 && inetAddressIndex < inetList.size()) {
-                    scanner.close();
-                    System.out.println("===============================================================");
-                	return inetList.get(inetAddressIndex).getHostAddress();
-                }
-            }
+        	try {
+	            System.out.print("ChooseIPAddress> ");
+	            String nextLine = scanner.nextLine();
+	            int input = !nextLine.equals("") ? Integer.parseInt(nextLine) : -1;
+	            if (input >= 0 && input < netInts.size()) {
+	            	NetworkInterface netint = netInts.get(input);
+	            	System.out.println("Please choose the InetAddress index you want to use");
+	                System.out.print("ChooseIPAddress> ");
+	                List<InetAddress> inetList = Collections.list(netint.getInetAddresses());
+	                int inetAddressIndex = Integer.parseInt(scanner.nextLine());
+	                if (inetAddressIndex >= 0 && inetAddressIndex < inetList.size()) {
+	                    scanner.close();
+	                    System.out.println("===============================================================");
+	                	return inetList.get(inetAddressIndex).getHostAddress();
+	                }
+	            }
+    		} catch (NumberFormatException e) {}
             System.out.println("That index is invalid, please try again");
         }	
 	}

@@ -42,12 +42,15 @@ public class Controller implements ControllerProto {
 
 	public static void main (String[] args){
 		int portNumber = 6789;
+		// Arguments used when restarting failed controller after election process.
+		// Args[0]: ServerIPAddress 
+		// Args[1]: ServerPortNumber
 		if (args.length >= 2) {
 			// Connect with the new controller.
 			String serverIPAddress = args[0];
 			int serverPortNumber = 0;
 			try { 
-				serverPortNumber = Integer.parseInt (args[1]); 
+				serverPortNumber = Integer.parseInt(args[1]); 
 			} catch (NumberFormatException e) { 
 				System.out.println("Invalid port number.");
 				System.exit(0);

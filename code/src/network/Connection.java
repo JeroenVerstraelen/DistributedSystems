@@ -46,13 +46,13 @@ public class Connection {
 		while (retries < maxConnectionRetries) {
 			try {
 				// Connect to the controller.
+				System.out.println("Connecting to " + InetAddress.getByName(serverIPAddress) + " with port " + this.serverPortNumber);
 				InetSocketAddress serverSocketAddress = new InetSocketAddress(InetAddress.getByName(serverIPAddress), this.serverPortNumber);
 				client = new SaslSocketTransceiver(serverSocketAddress);
-				
 				T proxy = (T) SpecificRequestor.getClient(protocol, client);
+				
 				if (protocol == ControllerProto.class) {
-					clientIPAddress = InetAddress.getLocalHost().getHostAddress();
-					if (!local && clientIPAddress.equals(""))
+			    	if (!local && clientIPAddress.equals(""))
 						clientIPAddress = NetworkUtils.askIPAddress();
 					this.id = ((ControllerProto) proxy).register(clientIPAddress, this.clientPortNumber, clientType);
 					System.out.println("Client Connection ID: " + this.id);

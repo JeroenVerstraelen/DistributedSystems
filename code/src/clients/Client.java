@@ -56,7 +56,7 @@ public class Client implements ClientProto {
 	}
 	
 	public Entry<String,Integer> run(Entry<String, Integer> controllerDetails) {
-			// Start own server (On a separate thread).
+			// Start server (separate thread).
 			Server clientServer = null;
 			int portNumber = NetworkUtils.getValidPortNumber(6790);
 			try {
@@ -74,6 +74,7 @@ public class Client implements ClientProto {
 			controllerConnection = new Connection(controllerDetails.getKey(), portNumber, controllerDetails.getValue());
 			try {
 				proxy = controllerConnection.connect(ControllerProto.class, type);
+		    	// System.out.println("Attempting connection with controller.");
 			} catch (IOException e) {
 				System.out.println(type + "> Cannot establish connection with the controller!");
 				clientServer.close();
@@ -84,7 +85,9 @@ public class Client implements ClientProto {
 			cliThread = new Thread(new Runnable()
 		    {
 		      @Override
-		      public void run() { cli(); }
+		      public void run() { 
+		    	  cli(); 
+		      }
 		    });
 			cliThread.start();
 			
@@ -93,6 +96,7 @@ public class Client implements ClientProto {
 			while (true) {
 				try {
 					if (!cliThread.isAlive())
+						// User killed interface, end main program loop.
 						break;
 					if (counter % backupSeconds == 0)
 						connectedClientsBackup = proxy.requestBackup();
@@ -101,7 +105,7 @@ public class Client implements ClientProto {
 					proxy.ping();
 					counter++;
 				} catch (AvroRemoteException | UndeclaredThrowableException e) {
-					// Controller is not responding.
+					// Controller is not responding to ping request.
 					if (!electionIsRunning) {
 						counter = 0;
 						electionIsRunning = true;
@@ -115,12 +119,16 @@ public class Client implements ClientProto {
 							cliThread.interrupt();
 					}
 				}
-				try { Thread.sleep(1000); } catch (InterruptedException e) {}
+				// Ping every second
+				try { Thread.sleep(10000); } catch (InterruptedException e) {}
 			}
 			
+			// Cleanup after main loop ends.
 			clientServer.close();
 			controllerConnection.disconnect();
 			try { clientServer.join(); cliThread.join(); } catch (InterruptedException e) {}
+			
+			// If elected, become new controller.
 			if (elected) {
 				elected = false;
 				Controller controller = new Controller();
@@ -132,10 +140,12 @@ public class Client implements ClientProto {
 	}
 	
 	protected void cli() {
-	    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));     
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));     
         String input = "";
+        
 	    while (true) {
 	    	System.out.print(type + "> ");
+	    	// Read the next line.
 		    try {
 	            while(!br.ready()) { Thread.sleep(200); }
 	            input = br.readLine();
@@ -145,7 +155,7 @@ public class Client implements ClientProto {
         	} catch (IOException e) { 
         		return;
 			}	        
-		    // Handle the defaults.
+		    // Handle the input from the user.
 	        if (input.equals("exit"))
 	            break;
 	        if (input.equals("id")) {
@@ -155,12 +165,15 @@ public class Client implements ClientProto {
 	        try {
 	        	handleInput(input);
 			} catch(AvroRemoteException e) {
+				/*
+				// Controller is not responding to user initiated request.
 				if (!electionIsRunning) {
 					electionIsRunning = true;
 					controllerConnection.disconnect();
 					if ( controllerCandidateTypes.contains(type) )
 						startElection();
 				}
+				// Wait until election is done, wait again if woken up before end of election.
 				while (electionIsRunning) {
 					try { 
 						synchronized(cliThread) { cliThread.wait(); } 
@@ -169,12 +182,14 @@ public class Client implements ClientProto {
 					}
 				}
 				if (!elected)
+					// Handle the left over input that caused exception.
 					try {
 						handleInput(input); 
 					} catch(AvroRemoteException ignore) {
 					} catch (InterruptedException e1) {		
 						try { br.close(); } catch (IOException ignore) {}
 					}
+				*/
 			} catch (InterruptedException e1) {		
 				try { br.close(); } catch (IOException ignore) {}
 			}
@@ -237,7 +252,8 @@ public class Client implements ClientProto {
 			controllerConnection.setId(id);
 			controllerConnection.setClientIPAddress(ownIPAddress);
 			ringProxy = controllerConnection.connect(ClientProto.class, "");
-			ringProxy.settleConnection(); 
+			ringProxy.settleConnection(); // Makes sure one way requests behave properly. 
+			// Notify while loop in election() that ringProxy can be used.
 		    synchronized(ringProxy) { ringProxy.notifyAll(); }
 		} catch (IOException e) {
 			System.err.println("Could not connect to next Client after Controller failure");
@@ -249,18 +265,23 @@ public class Client implements ClientProto {
 
 	@Override
 	public void election(int i, int id) {
-		// Reduces the amount of running elections.
+		// Make sure connection with next id is set up.
 		if (!electionIsRunning) {
 			electionIsRunning = true;
 			if (!connectRing())
 				return;
 		}
-		// Make sure ringProxy is initialized.
-		while (ringProxy == null) {
-	            try {
-	                Thread.currentThread().wait();
-	            } catch (InterruptedException | IllegalMonitorStateException e) {}
+		else {
+			// Wait until ringProxy is initialized in startElection.
+			while (ringProxy == null) {
+		            try {
+		                Thread.currentThread().wait();
+		            } catch (InterruptedException | IllegalMonitorStateException e) {}
+			}
 		}
+		System.out.println("election( " +  i + ", " + id  + " )" );
+
+		// Election algorithm
 		int ownId = controllerConnection.getId();
 		if (id > ownId) {
 			// electionIsRunning = false;
@@ -275,6 +296,7 @@ public class Client implements ClientProto {
 		}
 		if (i == ownId) {
 			elected = true;
+			System.out.println("in election: elected() self sent");
 			newControllerPortNumber = NetworkUtils.getValidPortNumber(6750);
 			ringProxy.elected(ownId, controllerConnection.getClientIPAddress(), newControllerPortNumber);
 			// Reset election variables.
@@ -284,6 +306,7 @@ public class Client implements ClientProto {
 
 	@Override
 	public void elected(int i, CharSequence IPAddress, int portNumber) {
+		System.out.println("elected( " +  i + ", " + IPAddress  + ", " + portNumber + " )" );
 		int ownId = controllerConnection.getId();
 		if (i != ownId) {
 			if (electionIsRunning || !controllerCandidateTypes.contains(type)) {
@@ -310,7 +333,7 @@ public class Client implements ClientProto {
 			    synchronized(cliThread) { cliThread.notifyAll(); }
 			}
 		} else {
-			// Make sure all other clients know there is a new Controller.
+			// Make sure all non electable clients know there is a new Controller.
 			Iterator<FullClientRecord> itr = connectedClientsBackup.iterator();
 			while(itr.hasNext()) {
 				FullClientRecord next = itr.next();
