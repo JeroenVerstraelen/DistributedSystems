@@ -255,13 +255,14 @@ public class User extends Client {
 		String serverIPAddress = "";
 		int serverPortnumber = 6789;
 		if (args.length > 0) {
-			if (!args[0].equals("null"))
+			if (!args[0].equals("local"))
 				serverIPAddress = args[0];
+			if (args.length > 1)	
+				serverPortnumber = Integer.parseInt(args[1]);
 		}
-		if (args.length > 1)	
-			serverPortnumber = Integer.parseInt(args[1]);
 		Entry<String, Integer> controllerDetails = new AbstractMap.SimpleEntry<>(serverIPAddress, serverPortnumber);
-		while (!controllerDetails.getKey().equals("None")) 
+		// ControllerDetails are adjusted when running client as controller.
+		while (!controllerDetails.getKey().equals("None"))
 			controllerDetails = new User().run(controllerDetails);
 	}
 	

@@ -20,6 +20,7 @@ public class Light extends Client {
 		System.out.println("=========");
 		System.out.println("id");
 		System.out.println("state");
+		System.out.println("state");
 		System.out.println("exit");
 		System.out.println("");
 	}
@@ -37,6 +38,9 @@ public class Light extends Client {
         		break;
         	case "state": 
         		state();
+        		break;
+        	case "switch":
+        		switchLocal();
         		break;
         	default:
 	        	System.out.println("Command not recognized. Type 'list' for more information.");
@@ -68,6 +72,12 @@ public class Light extends Client {
 		String stateString = "OFF";
 		if (state) stateString = "ON";
 		System.out.println("Light state changed to state: " + stateString);
+	}
+	
+	private void switchLocal() {
+		try {
+			proxy.switchLight(controllerConnection.getId());
+		} catch (AvroRemoteException e) {}
 	}
 	
 	@Override

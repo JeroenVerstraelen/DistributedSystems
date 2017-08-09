@@ -100,7 +100,11 @@
         "getTemperatureHistory": {
 			"request": [] ,
 			"response": {"type": "array", "items": "float"}
-        }
+        },
 
+        "getTime": {
+			"request": [] ,
+			"response": "int"
+        } 
 	}
 }

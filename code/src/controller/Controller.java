@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,34 +36,54 @@ import controller.clients.User;
 
 public class Controller implements ControllerProto {
 	private int currentId = -1;
-	private ConcurrentHashMap<Integer, Client> connectedClients = new ConcurrentHashMap<Integer, Client>();
+	static int time = 0;
+	// The current map of clients connected to this controller
+	private static ConcurrentHashMap<Integer, Client> connectedClients = new ConcurrentHashMap<Integer, Client>();
+	// Backup of clients for new controller
 	private static List<FullClientRecord> backupClients = new ArrayList<FullClientRecord>();
 	private static Thread cliThread = null;
-	private static Entry<String,Integer> prevControllerDetails = new AbstractMap.SimpleEntry<>("None", 0);
+	// When client turned into controller and new controller takes control
+	// these details are used to connect to new controller.
+	private static Entry<String,Integer> nextControllerDetails = new AbstractMap.SimpleEntry<>("None", 0);
 
+	/* 
+	 * When reconnecting after controller failure:
+	 * Args[0]: ServerIPAddress/local
+	 * Args[1]: ServerPortNumber
+	 * Otherwise no arguments should be used.
+	 */
 	public static void main (String[] args){
 		int portNumber = 6789;
-		// Arguments used when restarting failed controller after election process.
-		// Args[0]: ServerIPAddress 
-		// Args[1]: ServerPortNumber
-		if (args.length >= 2) {
-			// Connect with the new controller.
+		if (args.length == 2) {
+			// Reestablishing control
 			String serverIPAddress = args[0];
+			if (args[0].equals("local"))
+				try {
+					serverIPAddress = InetAddress.getLocalHost().getHostAddress();
+				} catch (UnknownHostException e1) {}
 			int serverPortNumber = 0;
-			try { 
-				serverPortNumber = Integer.parseInt(args[1]); 
-			} catch (NumberFormatException e) { 
-				System.out.println("Invalid port number.");
-				System.exit(0);
+			while(true) {
+				try { 
+					serverPortNumber = Integer.parseInt(args[1]); 
+					break;
+				} catch (NumberFormatException e) { 
+					System.out.println("Invalid port number, try again.");
+				}
 			}
 			try {
+				//System.out.println("IP " + serverIPAddress + " portNum: " + serverPortNumber);
 				InetSocketAddress serverSocketAddress = new InetSocketAddress(InetAddress.getByName(serverIPAddress), serverPortNumber);
 				Transceiver client = new SaslSocketTransceiver(serverSocketAddress);
 				ControllerProto proxy = (ControllerProto) SpecificRequestor.getClient(ControllerProto.class, client);
+				// Get the backup from old controller so our data is up to date
 				backupClients = new ArrayList<FullClientRecord>(proxy.requestBackup());
-				String IPAdress = NetworkUtils.askIPAddress();
+				// Send details of this controller
+				String IPAddress = serverIPAddress;
+				if (!args[0].equals("local"))
+					IPAddress = NetworkUtils.askIPAddress();
 				portNumber = NetworkUtils.getValidPortNumber(portNumber);
-				proxy.reestablishController(IPAdress, portNumber);
+				// Let old controller know we are taking control
+				proxy.reestablishController(IPAddress, portNumber);
 				client.close();
 			} catch (IOException e) {
 				System.out.println("Could not connect to controller.");
@@ -77,7 +98,7 @@ public class Controller implements ControllerProto {
 	}
 	
 	public Entry<String,Integer> run(int startingPortNumber) {
-		prevControllerDetails = new AbstractMap.SimpleEntry<>("None", 0);
+		nextControllerDetails = new AbstractMap.SimpleEntry<>("None", 0);
 		int portNumber = NetworkUtils.getValidPortNumber(startingPortNumber);
 		Server server = null;
 		try {
@@ -92,9 +113,9 @@ public class Controller implements ControllerProto {
 		System.out.println("Controller> Running controller on port: " + portNumber);
 		
 		// Pinger is used to check if clients have stopped responding.
-		Pinger pinger = new Pinger(connectedClients);
+		Pinger pinger = new Pinger(this);
 		pinger.start();
-		
+
 		// Start handling user input.
 		cliThread = new Thread(new Runnable()
 	    {
@@ -114,9 +135,12 @@ public class Controller implements ControllerProto {
 			connectedClients.get(key).disconnect();
 		backupClients = new ArrayList<FullClientRecord>();
 		
-		return prevControllerDetails;
+		// Pass the new controller details to client (if exists).
+		return nextControllerDetails;
 	}
-	
+	/*
+	 * Command line interface, looped in separate thread.
+	 */
 	private static void cli() {
         System.out.print("Controller> ");
 	    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));     
@@ -364,6 +388,7 @@ public class Controller implements ControllerProto {
 		for (int key : connectedClients.keySet()) {
 			Client client = connectedClients.get(key);
 			if (client instanceof TemperatureSensor) {
+				System.out.println(key + ": " + ((TemperatureSensor) client).getTemperature());
 				totalTemperature += ((TemperatureSensor) client).getTemperature();
 				numberOfTemperatureSensors++;
 			}
@@ -386,15 +411,15 @@ public class Controller implements ControllerProto {
 				history.add(tempHistory);
 			}
 		}
-		
 		List<Float> average_history = new ArrayList<Float>();
-		for (int j = 0; j < maxSize; j++) {
+		for (int j = 1; j <= maxSize; j++) {
 			int numberOfTemperatureSensors = 0;
 			float temp_sum = 0;
 			for (int i = 0; i < history.size(); i++) {
-				if (history.get(i).size()-1 >= j) {
+				int size = history.get(i).size(); 
+				if (size - j >= 0) {
 					numberOfTemperatureSensors++;
-					temp_sum += history.get(i).get(j);
+					temp_sum += history.get(i).get(size - j);					
 				}
 			}
 			average_history.add(temp_sum / numberOfTemperatureSensors);
@@ -436,12 +461,19 @@ public class Controller implements ControllerProto {
 			for (int key : connectedClients.keySet())
 				connectedClients.get(key).setNewController(IPAddress, portNumber);
 		} catch (AvroRemoteException ignore) {}
-		prevControllerDetails = new AbstractMap.SimpleEntry<>(IPAddress.toString(), portNumber);
+		connectedClients.clear();
+		time = 0;
+		nextControllerDetails = new AbstractMap.SimpleEntry<>(IPAddress.toString(), portNumber);
 		cliThread.interrupt();
 	}
 	
 	public static void print(String message) {
 		System.out.print("\n" + message + "\n" + "Controller> ");
+	}
+
+	@Override
+	public int getTime() throws AvroRemoteException {
+		return time;
 	}
 
 }

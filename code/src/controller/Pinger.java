@@ -11,24 +11,28 @@ import controller.clients.Client;
 public class Pinger extends Thread {
 	
 	private boolean isRunning = true;
-	private ConcurrentHashMap<Integer, Client> connectedClients;
+	private static Controller controller;
 	
-	public Pinger(ConcurrentHashMap<Integer, Client> connectedClients) {
-		this.connectedClients = connectedClients;
+	public Pinger(Controller con) {
+		Pinger.controller = con;
 	}
 
 	@Override
 	public void run() {
 		while (isRunning) {
-			for (int key : connectedClients.keySet()) {
-				try {
-					connectedClients.get(key).ping();
-				} catch (AvroRemoteException | EOFException | UndeclaredThrowableException e) {
-					// Client is no longer responding.
-					connectedClients.remove(key);
+			controller.time += 1;
+			if (controller.time % 2 == 0) {
+				for (int key : controller.getConnectedClients().keySet()) {
+					try {
+							controller.getConnectedClients().get(key).ping();
+					} catch (AvroRemoteException | EOFException | UndeclaredThrowableException e) {
+						// Client is no longer responding.
+						System.out.println("Client (" + key + ") disconnected");
+						controller.getConnectedClients().remove(key);
+					}
 				}
 			}
-			try { sleep(2000); } catch (InterruptedException e) {}
+			try { sleep(1000); } catch (InterruptedException e) {}
 		}
 	}
 	

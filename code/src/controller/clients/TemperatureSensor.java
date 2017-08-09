@@ -18,6 +18,8 @@ public class TemperatureSensor extends Client {
 	}
 	
 	public double getTemperature() throws AvroRemoteException {
+		if (temperatureHistory.size() == 0) 
+			return 0;
 		return temperatureHistory.get(temperatureHistory.size()-1);
 	}
 	

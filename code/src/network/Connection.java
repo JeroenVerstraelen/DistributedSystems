@@ -36,8 +36,9 @@ public class Connection {
 		} catch (UnknownHostException e) { e.printStackTrace(); } 
 		if (serverIPAddress.equals(""))
 			serverIPAddress = localAddress;
-		if (serverIPAddress == localAddress)
+		if (serverIPAddress.equals(localAddress)) {
 			local = true;
+		}
 		this.serverIPAddress = serverIPAddress;
 	}
 	
@@ -46,7 +47,7 @@ public class Connection {
 		while (retries < maxConnectionRetries) {
 			try {
 				// Connect to the controller.
-				System.out.println("Connecting to " + InetAddress.getByName(serverIPAddress) + " with port " + this.serverPortNumber);
+				//System.out.println("Connecting to " + InetAddress.getByName(serverIPAddress) + " with port " + this.serverPortNumber);
 				InetSocketAddress serverSocketAddress = new InetSocketAddress(InetAddress.getByName(serverIPAddress), this.serverPortNumber);
 				client = new SaslSocketTransceiver(serverSocketAddress);
 				T proxy = (T) SpecificRequestor.getClient(protocol, client);

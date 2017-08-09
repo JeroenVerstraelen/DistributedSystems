@@ -7,6 +7,8 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,9 +45,8 @@ public class Client implements ClientProto {
 	private static int newControllerPortNumber = 6789;
 	
 	// Settings
-	private int temperatureSeconds = 3; // Amount of seconds before sending a new temperature.
 	private int backupSeconds = 2; // Amount of seconds before requesting a new backup.
-	private int maxControllerWait = 60; // Amount of seconds to wait for a new controller.
+	private int maxControllerWait = 360; // Amount of seconds to wait for a new controller.
 	
 	public Client() {
 		// Make sure the input stream cannot be closed.
@@ -76,7 +77,7 @@ public class Client implements ClientProto {
 				proxy = controllerConnection.connect(ControllerProto.class, type);
 		    	// System.out.println("Attempting connection with controller.");
 			} catch (IOException e) {
-				System.out.println(type + "> Cannot establish connection with the controller!");
+				System.out.println(type + "> Cannot establish connection with the controller");
 				clientServer.close();
 				return new AbstractMap.SimpleEntry<>("None", 0);
 			}
@@ -91,6 +92,19 @@ public class Client implements ClientProto {
 		    });
 			cliThread.start();
 			
+			// Temperature sensors have an internal clock
+			Thread temperatureClock = null;
+			if (this instanceof TemperatureSensor) { 
+				temperatureClock = new Thread(new Runnable()
+				{
+			      @Override
+			      public void run() { 
+			    	  runClock();
+			      }
+			    });
+				temperatureClock.start();
+			}
+			
 			// Ping to see if the controller is responding.
 			int counter = 0;
 			while (true) {
@@ -100,8 +114,6 @@ public class Client implements ClientProto {
 						break;
 					if (counter % backupSeconds == 0)
 						connectedClientsBackup = proxy.requestBackup();
-					if (this instanceof TemperatureSensor && counter % temperatureSeconds == 0) 
-						((TemperatureSensor)this).addTemperature();
 					proxy.ping();
 					counter++;
 				} catch (AvroRemoteException | UndeclaredThrowableException e) {
@@ -113,31 +125,54 @@ public class Client implements ClientProto {
 						if ( controllerCandidateTypes.contains(type) )
 							startElection();
 					}
-					if (electionIsRunning) {
+					/*
+					else {
 						counter++;
-						if (counter > maxControllerWait) 
+						if (counter > maxControllerWait) {
+							System.out.println("Max controller wait time exceeded, shutting down.");
 							cliThread.interrupt();
+						}
 					}
+					*/
 				}
 				// Ping every second
-				try { Thread.sleep(10000); } catch (InterruptedException e) {}
+				try { Thread.sleep(1000); } catch (InterruptedException e) {}
 			}
 			
 			// Cleanup after main loop ends.
 			clientServer.close();
 			controllerConnection.disconnect();
-			try { clientServer.join(); cliThread.join(); } catch (InterruptedException e) {}
+			try { 
+				clientServer.join(); 
+				cliThread.join(); 
+				if (temperatureClock != null) {
+					temperatureClock.interrupt(); 
+					temperatureClock.join();
+				}
+			} catch (InterruptedException e) {}
 			
 			// If elected, become new controller.
 			if (elected) {
 				elected = false;
 				Controller controller = new Controller();
+				// Remove this client from the backup
+				int toRemove = -1;
+				for (int i = 0; i < connectedClientsBackup.size(); i++) {
+					if (connectedClientsBackup.get(i).getId() == controllerConnection.getId()) {
+						toRemove = i;
+						break;
+					}
+				}
+				if (toRemove != -1)
+					connectedClientsBackup.remove(toRemove);
 				controller.setBackup(connectedClientsBackup);
 				Entry<String,Integer> result = controller.run(newControllerPortNumber);
 				return result;
 			}
 		return new AbstractMap.SimpleEntry<>("None", 0);
 	}
+	
+	protected void runClock() {}
 	
 	protected void cli() {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));     
@@ -201,6 +236,7 @@ public class Client implements ClientProto {
 	protected void handleInput(String input) throws AvroRemoteException, InterruptedException{}
 	
 	protected void startElection() {
+        System.out.println("STARTING ELECTION");
 		if(!connectRing())
 			return;
 		int id = controllerConnection.getId();
@@ -209,62 +245,68 @@ public class Client implements ClientProto {
 	}
 	
 	private boolean connectRing() {
-		int clientCount = 0;
+		// Remove non controllerCandidateTypes
+		List<FullClientRecord> electClients = new ArrayList<FullClientRecord>();
 		for (FullClientRecord client : connectedClientsBackup) {
 			if (controllerCandidateTypes.contains( client.getType().toString() ))
-				clientCount++;
+				electClients.add(client);
 		}
-		if (clientCount < 2) {
-			// Automatically become a controller.
-			elected = true;
-			newControllerPortNumber = NetworkUtils.getValidPortNumber(6750);
-			elected(controllerConnection.getId(), controllerConnection.getClientIPAddress(),
-					newControllerPortNumber); 
-			ringProxy = null;
-			return false;
-		}
-		// Find the next ID in the ring to connect to.
-		FullClientRecord nextClient = null;
-		Integer id = controllerConnection.getId();
-		Integer nextId = -1;
-		Iterator<FullClientRecord> itr = connectedClientsBackup.iterator();
-		while(itr.hasNext()) {
-			FullClientRecord next = itr.next();
-			if (next.getId() > id && (next.getId() < nextId || nextId == -1)) {
-				if (controllerCandidateTypes.contains(next.getType().toString())) {
-					nextId = next.getId();
-					nextClient = next;
-				}
+		// Sort list on Id
+		Collections.sort(electClients, new Comparator<FullClientRecord>() {
+		    public int compare(FullClientRecord one, FullClientRecord other) {
+		        return one.getId().compareTo(other.getId());
+		    }
+		}); 
+		while(true) {
+			int clientCount = electClients.size();
+			if (clientCount < 2) {
+				// Automatically become a controller.
+				elected = true;
+				newControllerPortNumber = NetworkUtils.getValidPortNumber(6750);
+				elected(controllerConnection.getId(), controllerConnection.getClientIPAddress(),
+						newControllerPortNumber); 
+				ringProxy = null;
+				return false;
 			}
-		}
-		if (nextId == -1) {
-			for (FullClientRecord client : connectedClientsBackup) {
-				if (controllerCandidateTypes.contains( client.getType().toString() ))
-					nextClient = client;
+			// Find the next id in the ring to connect to.
+			FullClientRecord nextClient = null;
+			Integer currentId = controllerConnection.getId();
+			for(int i=0; i<clientCount; i++) {
+				int checkId = electClients.get(i).getId();
+			    if (currentId == checkId) {
+			    	int nextId = i+1;
+			    	if (nextId >= clientCount) 
+			    		nextId = 0;
+			    	nextClient = electClients.get(nextId);
+			        break;
+			    }
 			}
-		}
-		// Connect to next ID
-		try {
-			String ownIPAddress = controllerConnection.getClientIPAddress();
-			controllerConnection = new Connection(nextClient.getIPaddress().toString(), 
-												  controllerConnection.getClientPortNumber(), 
-												  nextClient.getPortNumber());
-			controllerConnection.setId(id);
-			controllerConnection.setClientIPAddress(ownIPAddress);
-			ringProxy = controllerConnection.connect(ClientProto.class, "");
-			ringProxy.settleConnection(); // Makes sure one way requests behave properly. 
-			// Notify while loop in election() that ringProxy can be used.
-		    synchronized(ringProxy) { ringProxy.notifyAll(); }
-		} catch (IOException e) {
-			System.err.println("Could not connect to next Client after Controller failure");
-			System.err.println("Shutting down.");
-			System.exit(0);
+			try {
+				// Connect to next ID
+				String ownIPAddress = controllerConnection.getClientIPAddress();
+				controllerConnection = new Connection(nextClient.getIPaddress().toString(), 
+													  controllerConnection.getClientPortNumber(), 
+													  nextClient.getPortNumber());
+				controllerConnection.setId(currentId);
+				controllerConnection.setClientIPAddress(ownIPAddress);
+				ringProxy = controllerConnection.connect(ClientProto.class, "");
+				ringProxy.settleConnection(); // Makes sure one way requests behave properly. 
+				// Notify while loop in election() that ringProxy can be used.
+	            System.out.println("Connected with " + nextClient.getId());
+			    synchronized(ringProxy) { ringProxy.notifyAll(); }
+			    break;
+			} catch (IOException e) {
+				System.err.println("Could not connect to next Client after Controller failure");
+				System.err.println("Attempting next client.");
+				electClients.remove(nextClient);
+			}
 		}
 		return true;
 	}
 
 	@Override
 	public void election(int i, int id) {
+		System.out.println("election( " +  i + ", " + id  + " )" );
 		// Make sure connection with next id is set up.
 		if (!electionIsRunning) {
 			electionIsRunning = true;
@@ -279,8 +321,6 @@ public class Client implements ClientProto {
 		            } catch (InterruptedException | IllegalMonitorStateException e) {}
 			}
 		}
-		System.out.println("election( " +  i + ", " + id  + " )" );
-
 		// Election algorithm
 		int ownId = controllerConnection.getId();
 		if (id > ownId) {
@@ -296,7 +336,7 @@ public class Client implements ClientProto {
 		}
 		if (i == ownId) {
 			elected = true;
-			System.out.println("in election: elected() self sent");
+			System.out.println("Electing self");
 			newControllerPortNumber = NetworkUtils.getValidPortNumber(6750);
 			ringProxy.elected(ownId, controllerConnection.getClientIPAddress(), newControllerPortNumber);
 			// Reset election variables.
@@ -351,6 +391,7 @@ public class Client implements ClientProto {
 			}
 			electionIsRunning = false;
 			participantMap.clear();
+			System.out.println("Elected ownid = i, cliThread interrupted");
 			cliThread.interrupt();
 		}
 	}
