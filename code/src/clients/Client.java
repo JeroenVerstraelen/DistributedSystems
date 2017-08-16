@@ -57,7 +57,7 @@ public class Client implements ClientProto {
 	}
 	
 	public Entry<String,Integer> run(Entry<String, Integer> controllerDetails) {
-			// Start server (separate thread).
+			// Start server (separate thread).========
 			Server clientServer = null;
 			int portNumber = NetworkUtils.getValidPortNumber(6790);
 			try {
@@ -294,6 +294,7 @@ public class Client implements ClientProto {
 				// Notify while loop in election() that ringProxy can be used.
 	            System.out.println("Connected with " + nextClient.getId());
 			    synchronized(ringProxy) { ringProxy.notifyAll(); }
+	            System.out.println("Done synchronizing ringProxy");
 			    break;
 			} catch (IOException e) {
 				System.err.println("Could not connect to next Client after Controller failure");
@@ -301,21 +302,26 @@ public class Client implements ClientProto {
 				electClients.remove(nextClient);
 			}
 		}
+        System.out.println("Fuly left");
 		return true;
 	}
 
 	@Override
 	public void election(int i, int id) {
+		System.out.println("========" );
 		System.out.println("election( " +  i + ", " + id  + " )" );
 		// Make sure connection with next id is set up.
 		if (!electionIsRunning) {
 			electionIsRunning = true;
-			if (!connectRing())
+			if (!connectRing()) {
+				System.out.println("Ring not connected." );
 				return;
+			}
 		}
 		else {
 			// Wait until ringProxy is initialized in startElection.
 			while (ringProxy == null) {
+					System.out.println("Waiting for ringProxy." );
 		            try {
 		                Thread.currentThread().wait();
 		            } catch (InterruptedException | IllegalMonitorStateException e) {}
@@ -326,11 +332,13 @@ public class Client implements ClientProto {
 		if (id > ownId) {
 			// electionIsRunning = false;
 			ringProxy.election(i, id);
+			System.out.println("sent election( " +  i + ", " + id  + " )" );
 			participantMap.put(ownId, true);
 		}
 		if (id <= ownId && i != ownId) {
 			if ((!participantMap.containsKey(ownId)) || (!participantMap.get(ownId))) {
 				ringProxy.election(ownId, ownId);
+				System.out.println("sent election( " +  ownId + ", " + ownId  + " )" );
 				participantMap.put(ownId, true);
 			}
 		}
@@ -338,10 +346,12 @@ public class Client implements ClientProto {
 			elected = true;
 			System.out.println("Electing self");
 			newControllerPortNumber = NetworkUtils.getValidPortNumber(6750);
+			System.out.println("sent elected( " +  ownId + ", ownIP, portNum )" );
 			ringProxy.elected(ownId, controllerConnection.getClientIPAddress(), newControllerPortNumber);
 			// Reset election variables.
 			ringProxy = null;
 		}
+		System.out.println("========" );
 	}
 
 	@Override
@@ -350,6 +360,8 @@ public class Client implements ClientProto {
 		int ownId = controllerConnection.getId();
 		if (i != ownId) {
 			if (electionIsRunning || !controllerCandidateTypes.contains(type)) {
+				// Continue handling user input.
+				electionIsRunning = false;
 				if (ringProxy != null)
 					ringProxy.elected(i, IPAddress, portNumber);
 				ringProxy = null;
@@ -368,31 +380,31 @@ public class Client implements ClientProto {
 						try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
 					}
 				}
-				// Continue handling user input.
-				electionIsRunning = false;
 			    synchronized(cliThread) { cliThread.notifyAll(); }
 			}
 		} else {
-			// Make sure all non electable clients know there is a new Controller.
-			Iterator<FullClientRecord> itr = connectedClientsBackup.iterator();
-			while(itr.hasNext()) {
-				FullClientRecord next = itr.next();
-				if (!controllerCandidateTypes.contains(next.getType().toString())) {
-					try {
-						Connection tempConnection = new Connection(next.getIPaddress().toString(), 
-							  								   	   controllerConnection.getClientPortNumber(), 
-							  								   	   next.getPortNumber());
-						ClientProto tempProxy = tempConnection.connect(ClientProto.class, "");
-						tempProxy.settleConnection();
-						tempProxy.elected(i, IPAddress, portNumber);
-						tempConnection.disconnect();
-					} catch (IOException | UndeclaredThrowableException e) {}
+			if (electionIsRunning) {
+				electionIsRunning = false;
+				// Make sure all non electable clients know there is a new Controller.
+				Iterator<FullClientRecord> itr = connectedClientsBackup.iterator();
+				while(itr.hasNext()) {
+					FullClientRecord next = itr.next();
+					if (!controllerCandidateTypes.contains(next.getType().toString())) {
+						try {
+							Connection tempConnection = new Connection(next.getIPaddress().toString(), 
+								  								   	   controllerConnection.getClientPortNumber(), 
+								  								   	   next.getPortNumber());
+							ClientProto tempProxy = tempConnection.connect(ClientProto.class, "");
+							tempProxy.settleConnection();
+							tempProxy.elected(i, IPAddress, portNumber);
+							tempConnection.disconnect();
+						} catch (IOException | UndeclaredThrowableException e) {}
+					}
 				}
+				participantMap.clear();
+				System.out.println("Elected ownid = i, cliThread interrupted");
+				cliThread.interrupt();
 			}
-			electionIsRunning = false;
-			participantMap.clear();
-			System.out.println("Elected ownid = i, cliThread interrupted");
-			cliThread.interrupt();
 		}
 	}
 	
