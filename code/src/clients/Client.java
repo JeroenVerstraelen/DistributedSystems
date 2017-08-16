@@ -406,7 +406,7 @@ public class Client implements ClientProto {
 					}
 				}
 				participantMap.clear();
-				System.out.println("Elected ownid = i, cliThread interrupted");
+				System.out.println("Elected ownid = i, cliThread interruptedd");
 				cliThread.interrupt();
 				electionIsRunning = false;
 				someoneElected = false;
