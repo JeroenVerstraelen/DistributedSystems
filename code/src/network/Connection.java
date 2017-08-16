@@ -17,7 +17,7 @@ public class Connection {
 	 * Controller to Client connections have no ID.
 	 */
 	
-	private String clientIPAddress = "";
+	private static String clientIPAddress = "";
 	private String serverIPAddress = "";
 	private int clientPortNumber;
 	private int serverPortNumber;
