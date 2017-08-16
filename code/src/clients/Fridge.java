@@ -77,7 +77,7 @@ public class Fridge extends Client {
 		String serverIPAddress = "";
 		int serverPortnumber = 6789;
 		if (args.length > 0) {
-			if (!args[0].equals("null"))
+			if (!args[0].equals("local"))
 				serverIPAddress = args[0];
 		}
 		if (args.length > 1)	

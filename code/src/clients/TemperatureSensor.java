@@ -55,6 +55,7 @@ public class TemperatureSensor extends Client {
 				time += 1 + driftValue;
 				if (time - lastSent > temperatureSeconds) {
 					lastSent = time;
+					System.out.println("Sending temperature: " + time);
 					addTemperature();
 				}
 				if (counter % timeOutputSeconds == 0) {
@@ -111,7 +112,7 @@ public class TemperatureSensor extends Client {
 		String serverIPAddress = "";
 		int serverPortnumber = 6789;
 		if (args.length > 0) {
-			if (!args[0].equals("null"))
+			if (!args[0].equals("local"))
 				serverIPAddress = args[0];
 		}
 		if (args.length > 1)	
