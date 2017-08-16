@@ -1,5 +1,8 @@
 package clients;
 
+import java.io.EOFException;
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -9,9 +12,15 @@ import java.util.Set;
 
 import org.apache.avro.AvroRemoteException;
 
+import network.Connection;
+import proto.ClientProto;
+
 
 public class Fridge extends Client {
 	private static Set<String> inventory = new HashSet<String>();
+	private boolean isOpen = false;
+	private Connection userConnection = null;
+	private ClientProto userProxy = null;
 	
 	public Fridge() { 
 		super();
@@ -23,7 +32,7 @@ public class Fridge extends Client {
 		System.out.println("=========");
 		System.out.println("id");
 		System.out.println("inventory");
-		System.out.println("add [item]");
+		//System.out.println("add [item]");
 		System.out.println("exit");
 		System.out.println("");
 	}
@@ -106,6 +115,43 @@ public class Fridge extends Client {
 		if (inventory.isEmpty())
 			proxy.announceEmpty(controllerConnection.getId());
 		return retVal;
+	}
+	
+	@Override
+	public boolean isOpen() throws AvroRemoteException {
+		return isOpen;
+	}
+	
+	@Override
+	public void closeFridge() {
+		isOpen = false;
+	}
+	
+	@Override
+	public Void connectFridge(CharSequence userIP, int userPortNumber) throws AvroRemoteException {
+		/*
+		// In different thread!!
+		userConnection = new Connection(userIP.toString(), 
+										  controllerConnection.getClientPortNumber(), 
+										  userPortNumber);
+		try {
+			userProxy = userConnection.connect(ClientProto.class, type);
+		} catch (IOException e) {
+			return null;
+		}
+		while (isOpen) {
+			try {
+				userProxy.ping();
+			} catch (AvroRemoteException | EOFException | UndeclaredThrowableException e) {
+				break;
+			}
+			try { Thread.sleep(1000); } catch (InterruptedException e) {}
+		}
+		userConnection.disconnect();
+		userConnection = null;
+		isOpen = false;
+		*/
+		return null;
 	}
 
 }

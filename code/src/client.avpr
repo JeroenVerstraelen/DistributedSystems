@@ -10,6 +10,15 @@
 			"request": [],
 			"response": "boolean"
         },
+        "closeFridge": {
+			"request": [],
+			"response": "null",
+            "one-way": true
+        },
+        "connectFridge": {
+			"request": [{"name": "IPAddress", "type": "string"}, {"name": "portNumber", "type": "int"}],
+			"response": "null"
+        },
       	"addFridgeItem": {
 			"request": [{"name": "item", "type": "string"}],
 			"response": "boolean"

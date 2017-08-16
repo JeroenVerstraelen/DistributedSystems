@@ -480,4 +480,14 @@ public class Client implements ClientProto {
 	@Override
 	public void switchState() {}
 
+	@Override
+	public void closeFridge() {
+	}
+
+	@Override
+	public Void connectFridge(CharSequence IPAddress, int portNumber) throws AvroRemoteException {
+		return null;
+	}
+
+
 }

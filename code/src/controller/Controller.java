@@ -54,12 +54,14 @@ public class Controller implements ControllerProto {
 	 */
 	public static void main (String[] args){
 		int portNumber = 6789;
-		if (args.length == 2) {
+		if (args.length >= 2) {
+			if (args.length >= 3) 
+				portNumber = Integer.parseInt(args[3]);
 			// Reestablishing control
 			String serverIPAddress = args[0];
 			if (args[0].equals("local"))
 				try {
-					serverIPAddress = InetAddress.getLocalHost().getHostAddress();
+					serverIPAddress = NetworkUtils.askIPAddress();
 				} catch (UnknownHostException e1) {}
 			int serverPortNumber = 0;
 			while(true) {

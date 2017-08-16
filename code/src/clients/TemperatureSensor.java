@@ -47,6 +47,7 @@ public class TemperatureSensor extends Client {
 	protected void runClock() {
 		int counter = 0;
 		double lastSent = 0;
+		double lastReceived = 0;
 		while (true) {
 			try {
 				counter++;
@@ -63,6 +64,9 @@ public class TemperatureSensor extends Client {
 					long start_time = System.currentTimeMillis();
 					time = proxy.getTime();
 					long end_time = System.currentTimeMillis();
+					if (lastReceived > time)
+						lastSent = 0;
+					lastReceived = time;
 					double difference = (end_time - start_time);
 					time += difference / 2;
 					System.out.println("Clock time: " + time);
