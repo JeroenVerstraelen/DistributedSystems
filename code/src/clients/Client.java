@@ -42,6 +42,7 @@ public class Client implements ClientProto {
 	protected static ClientProto ringProxy = null;
 	protected static boolean electionIsRunning = false;
 	protected static boolean elected = false;
+	protected static boolean someoneElected = false;
 	private static int newControllerPortNumber = 6789;
 	
 	// Settings
@@ -357,11 +358,12 @@ public class Client implements ClientProto {
 	@Override
 	public void elected(int i, CharSequence IPAddress, int portNumber) {
 		System.out.println("elected( " +  i + ", " + IPAddress  + ", " + portNumber + " )" );
+		if (someoneElected)
+			return;
+		someoneElected = true;
 		int ownId = controllerConnection.getId();
 		if (i != ownId) {
 			if (electionIsRunning || !controllerCandidateTypes.contains(type)) {
-				// Continue handling user input.
-				electionIsRunning = false;
 				if (ringProxy != null)
 					ringProxy.elected(i, IPAddress, portNumber);
 				ringProxy = null;
@@ -381,10 +383,12 @@ public class Client implements ClientProto {
 					}
 				}
 			    synchronized(cliThread) { cliThread.notifyAll(); }
+				// Continue handling user input.
+				electionIsRunning = false;
+				someoneElected = false;
 			}
 		} else {
 			if (electionIsRunning) {
-				electionIsRunning = false;
 				// Make sure all non electable clients know there is a new Controller.
 				Iterator<FullClientRecord> itr = connectedClientsBackup.iterator();
 				while(itr.hasNext()) {
@@ -404,6 +408,8 @@ public class Client implements ClientProto {
 				participantMap.clear();
 				System.out.println("Elected ownid = i, cliThread interrupted");
 				cliThread.interrupt();
+				electionIsRunning = false;
+				someoneElected = false;
 			}
 		}
 	}
