@@ -12,8 +12,8 @@ public class TemperatureSensor extends Client {
 	private List<Float> temperatureHistory = new ArrayList<Float>();
 	private int maxSize = 20;
 	
-	public TemperatureSensor(CharSequence IPaddress, int portNumber) throws IOException {
-		super(IPaddress, portNumber);
+	public TemperatureSensor(CharSequence IPaddress, int portNumber, int controllerPortNumber) throws IOException {
+		super(IPaddress, portNumber, controllerPortNumber);
 		this.proxy = this.connection.connect(ClientProto.class, "");
 	}
 	

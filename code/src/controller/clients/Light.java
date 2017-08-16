@@ -10,8 +10,8 @@ public class Light extends Client {
 	
 	private boolean previousLightState = false;
 	
-	public Light(CharSequence IPaddress, int portNumber) throws IOException {
-		super(IPaddress, portNumber);
+	public Light(CharSequence IPaddress, int portNumber, int controllerPortNumber) throws IOException {
+		super(IPaddress, portNumber, controllerPortNumber);
 		this.proxy = this.connection.connect(ClientProto.class, "");
 	}
 	

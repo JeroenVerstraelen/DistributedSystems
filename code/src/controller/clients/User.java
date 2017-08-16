@@ -9,8 +9,8 @@ public class User extends Client {
 	
 	private boolean inHouse = true;
 	
-	public User(CharSequence IPaddress, int portNumber) throws IOException {
-		super(IPaddress, portNumber);
+	public User(CharSequence IPaddress, int portNumber, int controllerPortNumber) throws IOException {
+		super(IPaddress, portNumber, controllerPortNumber);
 		this.proxy = this.connection.connect(ClientProto.class, "");
 	}
 

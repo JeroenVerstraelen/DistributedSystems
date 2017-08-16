@@ -20,7 +20,6 @@ public class Light extends Client {
 		System.out.println("=========");
 		System.out.println("id");
 		System.out.println("state");
-		System.out.println("state");
 		System.out.println("exit");
 		System.out.println("");
 	}

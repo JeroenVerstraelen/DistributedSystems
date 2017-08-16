@@ -20,10 +20,10 @@ public class Client {
 	
 	public Client() {}
 	
-	public Client(CharSequence IPAddress, int portNumber) {
+	public Client(CharSequence IPAddress, int clientPortNumber, int controllerPortNumber) {
 		this.IPAddress = IPAddress.toString();
-		this.portNumber = portNumber;
-		this.connection = new Connection(this.IPAddress, 6798, this.portNumber);
+		this.portNumber = clientPortNumber;
+		this.connection = new Connection(this.IPAddress, controllerPortNumber, this.portNumber);
 	}
 	
 	public String getIPAddress() {

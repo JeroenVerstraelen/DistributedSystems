@@ -19,7 +19,6 @@ public class Connection {
 	
 	private String clientIPAddress = "";
 	private String serverIPAddress = "";
-	private boolean local = false;
 	private int clientPortNumber;
 	private int serverPortNumber;
 	private Transceiver client = null;
@@ -30,15 +29,8 @@ public class Connection {
 	public Connection(String serverIPAddress, int clientPortNumber, int serverPortNumber) {
 		this.clientPortNumber = clientPortNumber;
 		this.serverPortNumber = serverPortNumber;
-		String localAddress = "";
-		try { 
-			localAddress = InetAddress.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e) { e.printStackTrace(); } 
 		if (serverIPAddress.equals(""))
-			serverIPAddress = localAddress;
-		if (serverIPAddress.equals(localAddress)) {
-			local = true;
-		}
+			System.out.println("Server IP is empty");
 		this.serverIPAddress = serverIPAddress;
 	}
 	
@@ -53,7 +45,7 @@ public class Connection {
 				T proxy = (T) SpecificRequestor.getClient(protocol, client);
 				
 				if (protocol == ControllerProto.class) {
-			    	if (!local && clientIPAddress.equals(""))
+			    	if (clientIPAddress.equals(""))
 						clientIPAddress = NetworkUtils.askIPAddress();
 					this.id = ((ControllerProto) proxy).register(clientIPAddress, this.clientPortNumber, clientType);
 					System.out.println("Client Connection ID: " + this.id);

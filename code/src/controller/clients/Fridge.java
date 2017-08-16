@@ -9,8 +9,8 @@ import proto.ClientProto;
 
 public class Fridge extends Client{
 	
-	public Fridge(CharSequence IPaddress, int portNumber) throws IOException{
-		super(IPaddress, portNumber);
+	public Fridge(CharSequence IPaddress, int portNumber, int controllerPortNumber) throws IOException{
+		super(IPaddress, portNumber, controllerPortNumber);
 		this.proxy = this.connection.connect(ClientProto.class, "");
 	}
 	

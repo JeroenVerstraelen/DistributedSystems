@@ -45,7 +45,7 @@ public class Controller implements ControllerProto {
 	// When client turned into controller and new controller takes control
 	// these details are used to connect to new controller.
 	private static Entry<String,Integer> nextControllerDetails = new AbstractMap.SimpleEntry<>("None", 0);
-
+	private static int controllerPortNumber = 6789;
 	/* 
 	 * When reconnecting after controller failure:
 	 * Args[0]: ServerIPAddress/local
@@ -191,10 +191,10 @@ public class Controller implements ControllerProto {
 		try {
 			switch (type.toString()) {
 				case "Fridge":
-					connected_client = new Fridge(IPaddress, portNumber);
+					connected_client = new Fridge(IPaddress, portNumber, controllerPortNumber);
 					break;
 				case "Light":
-					Light light = new Light(IPaddress, portNumber);
+					Light light = new Light(IPaddress, portNumber, controllerPortNumber);
 					if (backup != null) {
 						boolean currentState = light.getState();
 						light.setPreviousLightState(backup.getPreviousLight());
@@ -204,13 +204,13 @@ public class Controller implements ControllerProto {
 					connected_client = light;
 					break;
 				case "TemperatureSensor":
-					TemperatureSensor tempSensor = new TemperatureSensor(IPaddress, portNumber);
+					TemperatureSensor tempSensor = new TemperatureSensor(IPaddress, portNumber, controllerPortNumber);
 					if (backup != null)
 						tempSensor.setTemperatureHistory(backup.getTemperatureArray());
 					connected_client = tempSensor;
 					break;
 				case "User":
-					User user = new User(IPaddress, portNumber);
+					User user = new User(IPaddress, portNumber, controllerPortNumber);
 					boolean enter = true;
 					if (backup != null) {
 						enter = backup.getInHouse();
