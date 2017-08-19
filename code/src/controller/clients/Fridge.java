@@ -18,7 +18,7 @@ public class Fridge extends Client{
 		return proxy.getInventory();
 	}	
 	
-	public boolean isOpen() throws AvroRemoteException {
-		return proxy.isOpen();
+	public int getConnectedId() throws AvroRemoteException {
+		return proxy.getCurrentUser();
 	}
 }

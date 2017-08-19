@@ -105,6 +105,7 @@ public class User extends Client {
 										  fridge.getPortNumber());
 		try {
 			fridgeProxy = fridgeConnection.connect(ClientProto.class, type);
+			fridgeProxy.setCurrentUser(controllerConnection.getId());
 		} catch (IOException e) {
 			System.out.println("Cannot establish connection with the Fridge.");
 			return;
@@ -124,6 +125,7 @@ public class User extends Client {
 		    		try { 
 			    		// Clean up.
 		    			br.close();
+		    			fridgeProxy.closeFridge();
 			    		fridgeConnection.disconnect();
 			    		fridgeConnection = null;
 			    		fridgeConnectionRunning = false;
@@ -165,6 +167,7 @@ public class User extends Client {
 		    }
 		    // Clean up.
 			try { br.close(); } catch (IOException e) {}
+			fridgeProxy.closeFridge();
 			fridgeConnection.disconnect();
 			fridgeConnection = null;
 			fridgeConnectionRunning = false;
@@ -175,7 +178,7 @@ public class User extends Client {
 			fridgeConnection.disconnect();
 			fridgeConnection = null;
 			fridgeConnectionRunning = false;
-			System.out.println("The fridge no longer exists.");
+			System.out.println("Connection with the fridge has been lost.");
 		}
 	}	
 	

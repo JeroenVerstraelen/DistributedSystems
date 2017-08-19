@@ -454,11 +454,6 @@ public class Client implements ClientProto {
 
 	@Override
 	public void changeState(boolean state) {}
-	
-	@Override
-	public boolean isOpen() throws AvroRemoteException {
-		return false;
-	}
 
 	@Override
 	public boolean addFridgeItem(CharSequence item) throws AvroRemoteException {
@@ -485,9 +480,13 @@ public class Client implements ClientProto {
 	}
 
 	@Override
-	public Void connectFridge(CharSequence IPAddress, int portNumber) throws AvroRemoteException {
-		return null;
+	public int getCurrentUser() throws AvroRemoteException {
+		return -1;
 	}
 
+	@Override
+	public Void setCurrentUser(int id) throws AvroRemoteException {
+		return null;
+	}
 
 }

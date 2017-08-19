@@ -6,17 +6,17 @@
 			"request": [],
 			"response": {"type": "array", "items": "string"}
         },
-        "isOpen": {
-			"request": [],
-			"response": "boolean"
-        },
         "closeFridge": {
 			"request": [],
 			"response": "null",
             "one-way": true
         },
-        "connectFridge": {
-			"request": [{"name": "IPAddress", "type": "string"}, {"name": "portNumber", "type": "int"}],
+        "getCurrentUser": {
+			"request": [],
+			"response": "int"
+        },
+        "setCurrentUser": {
+			"request": [{"name": "id", "type": "int"}],
 			"response": "null"
         },
       	"addFridgeItem": {

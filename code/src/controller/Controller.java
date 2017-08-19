@@ -442,8 +442,11 @@ public class Controller implements ControllerProto {
 		Client client = connectedClients.get(id);
 		if (client == null || !(client instanceof Fridge))
 			return new BasicClientRecord(-1, "", 0, "");
-		if (((Fridge) client).isOpen() )
-			return new BasicClientRecord(-2, "", 0, "");
+		int connectedId = ((Fridge) client).getConnectedId();
+		if (connectedId != -1) {
+			if (connectedClients.containsKey(connectedId))
+				return new BasicClientRecord(-2, "", 0, "");
+		}
 		return new BasicClientRecord(id, client.getIPAddress(), client.getPortNumber(), 
 									 client.getClass().getName());
 	}
