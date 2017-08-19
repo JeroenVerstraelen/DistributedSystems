@@ -239,7 +239,7 @@ public class Client implements ClientProto {
 	protected void handleInput(String input) throws AvroRemoteException, InterruptedException{}
 	
 	protected void startElection() {
-        System.out.println("STARTING ELECTION");
+        //System.out.println("STARTING ELECTION");
 		if(!connectRing())
 			return;
 		int id = controllerConnection.getId();
@@ -295,9 +295,9 @@ public class Client implements ClientProto {
 				ringProxy = controllerConnection.connect(ClientProto.class, "");
 				ringProxy.settleConnection(); // Makes sure one way requests behave properly. 
 				// Notify while loop in election() that ringProxy can be used.
-	            System.out.println("Connected with " + nextClient.getId());
+	            //System.out.println("Connected with " + nextClient.getId());
 			    synchronized(ringProxy) { ringProxy.notifyAll(); }
-	            System.out.println("Done synchronizing ringProxy");
+	            //System.out.println("Done synchronizing ringProxy");
 			    break;
 			} catch (IOException e) {
 				System.err.println("Could not connect to next Client after Controller failure");
@@ -305,14 +305,13 @@ public class Client implements ClientProto {
 				electClients.remove(nextClient);
 			}
 		}
-        System.out.println("Fuly left");
 		return true;
 	}
 
 	@Override
 	public void election(int i, int id) {
-		System.out.println("========" );
-		System.out.println("election( " +  i + ", " + id  + " )" );
+		//System.out.println("========" );
+		//System.out.println("election( " +  i + ", " + id  + " )" );
 		// Make sure connection with next id is set up.
 		if (!electionIsRunning) {
 			electionIsRunning = true;
@@ -322,45 +321,45 @@ public class Client implements ClientProto {
 			}
 		}
 		else {
-			System.out.println("Waiting for ringProxy." );
+			//System.out.println("Waiting for ringProxy." );
 			// Wait until ringProxy is initialized in startElection.
 			while (ringProxy == null) {
 		            try {
 		                Thread.currentThread().wait();
 		            } catch (InterruptedException | IllegalMonitorStateException e) {}
 			}
-			System.out.println("Done waiting for ringProxy." );
+			//System.out.println("Done waiting for ringProxy." );
 		}
 		// Election algorithm
 		int ownId = controllerConnection.getId();
 		if (id > ownId) {
 			// electionIsRunning = false;
 			ringProxy.election(i, id);
-			System.out.println("sent election( " +  i + ", " + id  + " )" );
+			//System.out.println("sent election( " +  i + ", " + id  + " )" );
 			participantMap.put(ownId, true);
 		}
 		if (id <= ownId && i != ownId) {
 			if ((!participantMap.containsKey(ownId)) || (!participantMap.get(ownId))) {
 				ringProxy.election(ownId, ownId);
-				System.out.println("sent election( " +  ownId + ", " + ownId  + " )" );
+				//System.out.println("sent election( " +  ownId + ", " + ownId  + " )" );
 				participantMap.put(ownId, true);
 			}
 		}
 		if (i == ownId) {
 			elected = true;
-			System.out.println("Electing self");
+			//System.out.println("Electing self");
 			newControllerPortNumber = NetworkUtils.getValidPortNumber(6750);
-			System.out.println("sent elected( " +  ownId + ", ownIP, portNum )" );
+			//System.out.println("sent elected( " +  ownId + ", ownIP, portNum )" );
 			ringProxy.elected(ownId, controllerConnection.getClientIPAddress(), newControllerPortNumber);
 			// Reset election variables.
 			ringProxy = null;
 		}
-		System.out.println("========" );
+		//System.out.println("========" );
 	}
 
 	@Override
 	public void elected(int i, CharSequence IPAddress, int portNumber) {
-		System.out.println("elected( " +  i + ", " + IPAddress  + ", " + portNumber + " )" );
+		//System.out.println("elected( " +  i + ", " + IPAddress  + ", " + portNumber + " )" );
 		if (someoneElected)
 			return;
 		someoneElected = true;
@@ -409,7 +408,7 @@ public class Client implements ClientProto {
 					}
 				}
 				participantMap.clear();
-				System.out.println("Elected ownid = i, cliThread interruptedd");
+				//System.out.println("Elected ownid = i, cliThread interruptedd");
 				cliThread.interrupt();
 				electionIsRunning = false;
 				someoneElected = false;

@@ -390,7 +390,6 @@ public class Controller implements ControllerProto {
 		for (int key : connectedClients.keySet()) {
 			Client client = connectedClients.get(key);
 			if (client instanceof TemperatureSensor) {
-				System.out.println(key + ": " + ((TemperatureSensor) client).getTemperature());
 				totalTemperature += ((TemperatureSensor) client).getTemperature();
 				numberOfTemperatureSensors++;
 			}

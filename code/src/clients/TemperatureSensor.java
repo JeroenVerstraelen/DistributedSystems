@@ -56,7 +56,7 @@ public class TemperatureSensor extends Client {
 				time += 1 + driftValue;
 				if (time - lastSent > temperatureSeconds) {
 					lastSent = time;
-					System.out.println("Sending temperature: " + time);
+					//System.out.println("Sending temperature: " + time);
 					addTemperature();
 				}
 				if (counter % timeOutputSeconds == 0) {
