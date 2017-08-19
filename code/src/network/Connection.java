@@ -29,8 +29,6 @@ public class Connection {
 	public Connection(String serverIPAddress, int clientPortNumber, int serverPortNumber) {
 		this.clientPortNumber = clientPortNumber;
 		this.serverPortNumber = serverPortNumber;
-		if (serverIPAddress.equals(""))
-			System.out.println("Server IP is empty");
 		this.serverIPAddress = serverIPAddress;
 	}
 	

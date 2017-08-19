@@ -74,14 +74,16 @@ public class Client implements ClientProto {
 			
 			// Connect to the Controller.
 			controllerConnection = new Connection(controllerDetails.getKey(), portNumber, controllerDetails.getValue());
+	    	//System.out.println("Attempting connection with controller.");
 			try {
 				proxy = controllerConnection.connect(ControllerProto.class, type);
-		    	// System.out.println("Attempting connection with controller.");
 			} catch (IOException e) {
 				System.out.println(type + "> Cannot establish connection with the controller");
 				clientServer.close();
 				return new AbstractMap.SimpleEntry<>("None", 0);
 			}
+	    	//System.out.println("Connection established.");
+
 			
 			// Start handling user input.
 			cliThread = new Thread(new Runnable()
@@ -320,13 +322,14 @@ public class Client implements ClientProto {
 			}
 		}
 		else {
+			System.out.println("Waiting for ringProxy." );
 			// Wait until ringProxy is initialized in startElection.
 			while (ringProxy == null) {
-					System.out.println("Waiting for ringProxy." );
 		            try {
 		                Thread.currentThread().wait();
 		            } catch (InterruptedException | IllegalMonitorStateException e) {}
 			}
+			System.out.println("Done waiting for ringProxy." );
 		}
 		// Election algorithm
 		int ownId = controllerConnection.getId();
